@@ -1,4 +1,4 @@
-# Ostinato MovementEngine (Phase 2)
+# Baritone MovementEngine (Phase 2)
 
 Stable travel boundary for TenorClef and other agents. **Mining / digging / builder stay on classic Baritone processes** — this API covers goto / follow / custom-goal style travel only.
 
@@ -47,8 +47,8 @@ When the running jar is stock Baritone (no MovementEngine classes), TenorClef’
 
 | Line | Tungsten | Hybrid behavior |
 |------|----------|-----------------|
-| Ostinato tip (`main`, modern MC) | Optional | Full hybrid |
-| Ostinato `1.16.1` | Not supported | Baritone-only (no MovementEngine types yet — see docs note) |
+| Baritone tip (`main`, modern MC) | Optional | Full hybrid |
+| Baritone `1.16.1` | Not supported | Baritone-only (no MovementEngine types yet — see docs note) |
 
 ## Out of scope (later phases)
 

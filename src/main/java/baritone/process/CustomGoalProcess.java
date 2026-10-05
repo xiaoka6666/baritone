@@ -188,7 +188,7 @@ public final class CustomGoalProcess extends BaritoneProcessHelper implements IC
     }
 
     private void cancelTungsten() {
-        // Only cancel Ostinato-owned Tungsten travel. Do not yank a follow/path
+        // Only cancel Baritone-owned Tungsten travel. Do not yank a follow/path
         // that TenorClef (or another client) started outside CustomGoal.
         if (tungstenTravelActive) {
             TungstenMovementBackend.INSTANCE.cancel();

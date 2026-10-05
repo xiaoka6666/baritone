@@ -1892,7 +1892,7 @@ public final class Settings {
      *   <li>{@code auto} — Tungsten when the mod is loaded, else Baritone</li>
      * </ul>
      * Mining / schematics / inventory stay on Baritone regardless of this setting.
-     * Drop a Tungsten fabric jar on the classpath (see Ostinato README) to enable.
+     * Drop a Tungsten fabric jar on the classpath (see Baritone README) to enable.
      */
     public final Setting<String> movementBackend = new Setting<>("auto");
 

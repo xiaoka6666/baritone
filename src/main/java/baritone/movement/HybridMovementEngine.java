@@ -122,7 +122,7 @@ public final class HybridMovementEngine implements IMovementEngine, Helper {
                 lastStatus = MovementStatus.FAILED;
                 return PathResult.failed(MovementFailureReason.BACKEND_UNAVAILABLE, MovementBackendKind.BARITONE, "no IBaritone");
             }
-            // Cancel Ostinato-owned Tungsten travel before classic pathing.
+            // Cancel Baritone-owned Tungsten travel before classic pathing.
             if (lastBackend == MovementBackendKind.TUNGSTEN) {
                 safeCancelTungsten();
             }

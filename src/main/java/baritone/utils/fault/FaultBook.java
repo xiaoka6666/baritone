@@ -13,7 +13,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Structured fault record. No Minecraft imports, so the same package is shared with Ostinato.
+ * Structured fault record. No Minecraft imports, so the same package is shared with Baritone.
  *
  * Every fault becomes one JSON line in {@code faults.jsonl}: t, sev, code, evidence, hint,
  * plus the context supplier's fields (phase, pos, dim, child, inv). A fault opens an

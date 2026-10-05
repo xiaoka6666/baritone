@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Reflection bridge to {@code kaptainwutax.tungsten} (3ndetz/Tungsten altoclef-compat).
- * Soft-fails when the Tungsten jar is absent so Ostinato still runs Baritone-only.
+ * Soft-fails when the Tungsten jar is absent so Baritone still runs Baritone-only.
  *
  * Responsibility split (same as TenorClef):
  * - Tungsten = physics A* travel / parkour / chase when selected
@@ -93,7 +93,7 @@ public final class TungstenMovementBackend implements IMovementBackend, Helper {
             Class<?> pfClass = pathfinder.getClass();
             pathfinderActive = pfClass.getField("active");
             pathfinderStop = pfClass.getField("stop");
-            // Mojmap names; at runtime both Ostinato and remapped Tungsten share intermediary types.
+            // Mojmap names; at runtime both Baritone and remapped Tungsten share intermediary types.
             pathfinderFind = pfClass.getMethod("find", LevelReader.class, Vec3.class, Player.class);
 
             executorField = dataClass.getField("EXECUTOR");
@@ -105,7 +105,7 @@ public final class TungstenMovementBackend implements IMovementBackend, Helper {
 
             present = true;
             presentDetail = "kaptainwutax.tungsten bound";
-            logDirect("Ostinato Tungsten backend: " + presentDetail);
+            logDirect("Baritone Tungsten backend: " + presentDetail);
         } catch (Throwable t) {
             presentDetail = "missing: " + t.getClass().getSimpleName() + ": " + t.getMessage();
             present = false;

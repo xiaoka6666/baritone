@@ -12,10 +12,10 @@
 
 ## Build / wire into TenorClef
 ```bat
-cd C:\Users\redfa\Documents\MinecraftDev\Ostinato-1.16.1
+cd C:\Users\redfa\Documents\MinecraftDev\Baritone-1.16.1
 git pull
 gradlew.bat build
-copy /Y dist\baritone-unoptimized-fabric-ostinato-1.16.1.jar ..\altoclef\libs\
+copy /Y dist\baritone-unoptimized-fabric-baritone-1.16.1.jar ..\altoclef\libs\
 cd ..\altoclef
 gradlew.bat :1.16.1:compileJava
 ```
