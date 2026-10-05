@@ -534,6 +534,21 @@ public final class PathingBehavior extends Behavior implements IPathingBehavior,
             PathCalculationResult calcResult = pathfinder.calculate(primaryTimeout, failureTimeout);
             synchronized (pathPlanLock) {
                 Optional<PathExecutor> executor = calcResult.getPath().map(p -> new PathExecutor(PathingBehavior.this, p));
+                // P2: discard over-long routes instead of committing to walk them. A 270+ block
+                // path in the nether (ancient-city dead-end) would take far longer to traverse
+                // than the time until the goal invalidates / changes, producing the observed
+                // repeated-recalc-with-zero-progress thrash.
+                if (executor.isPresent()) {
+                    int cap = Baritone.settings().maxPathLengthBlocks.value;
+                    if (cap > 0) {
+                        double pathLen = 0;
+                        for (BlockPos p : executor.get().getPath().positions()) pathLen++; // positions() already includes start
+                        if (pathLen > cap) {
+                            logDirect(String.format("Discarding path of %d blocks (> maxPathLengthBlocks=%d); goal considered unreachable this cycle", (int) pathLen, cap));
+                            executor = Optional.empty();
+                        }
+                    }
+                }
                 if (current == null) {
                     if (executor.isPresent()) {
                         if (executor.get().getPath().positions().contains(expectedSegmentStart)) {
