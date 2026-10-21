@@ -50,14 +50,16 @@ public class AltoClefSettings {
     private boolean _dontPlaceBucketButStillFall;
     private boolean _allowSwimThroughLava = false;
     private boolean _treatSoulSandAsOrdinaryBlock = false;
-    private boolean canWalkOnEndPortal = false;
+    // read by pathfinding threads via canWalkOnBlockState, written by the main thread:
+    // volatile so a toggle on the main thread is visible to search threads immediately
+    private volatile boolean canWalkOnEndPortal = false;
 
     public static AltoClefSettings getInstance() {
         return _instance;
     }
 
     public void canWalkOnEndPortal(boolean canWalk) {
-        canWalkOnEndPortal = canWalk;
+        this.canWalkOnEndPortal = canWalk;
     }
 
     public void avoidBlockBreak(BlockPos pos) {

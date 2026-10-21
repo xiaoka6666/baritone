@@ -101,8 +101,8 @@ public class MovementFall extends Movement {
         }
 
         boolean isWater = destState.getFluidState().getType() instanceof WaterFluid;
-        if (!isWater && willPlaceBucket() && !playerFeet.equals(dest) &&
-                !AltoClefSettings.getInstance().shouldNotPlaceBucketButStillFall()) {
+        if (!isWater && !AltoClefSettings.getInstance().shouldNotPlaceBucketButStillFall()
+                && !playerFeet.equals(dest) && willPlaceBucket()) {
             if (!Inventory.isHotbarSlot(ctx.player().getInventory().findSlotMatchingItem(STACK_BUCKET_WATER)) || ctx.world().dimension() == Level.NETHER) {
                 return state.setStatus(MovementStatus.UNREACHABLE);
             }

@@ -155,9 +155,8 @@ public interface MovementHelper extends ActionCosts, Helper {
         }
         Ternary canWalkThrough = canWalkThroughBlockState(state);
         Block block = state.getBlock();
-        BlockState up = bsi.get0(x, y + 1, z);
-        if (AltoClefSettings.getInstance().canSwimThroughLava() && block == Blocks.LAVA) {
-            return up.getFluidState().isEmpty();
+        if (block == Blocks.LAVA && AltoClefSettings.getInstance().canSwimThroughLava()) {
+            return bsi.get0(x, y + 1, z).getFluidState().isEmpty();
         }
         if (canWalkThrough == YES) {
             return true;

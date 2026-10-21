@@ -74,11 +74,7 @@ public final class PathNode {
     public PathNode(int x, int y, int z, Goal goal) {
         this.previous = null;
         this.cost = ActionCosts.COST_INF;
-        double originalCost = goal.heuristic(x, y, z);
-        if (Double.isNaN(originalCost)) {
-            throw new IllegalStateException(goal + " calculated implausible heuristic");
-        }
-        this.estimatedCostToGoal = AltoClefSettings.getInstance().applyGlobalHeuristic(originalCost, x, y, z);
+        this.estimatedCostToGoal = AltoClefSettings.getInstance().applyGlobalHeuristic(goal.heuristic(x, y, z), x, y, z);
         if (Double.isNaN(estimatedCostToGoal)) {
             throw new IllegalStateException(String.format(
                     "%s calculated implausible heuristic NaN at %s %s %s",
