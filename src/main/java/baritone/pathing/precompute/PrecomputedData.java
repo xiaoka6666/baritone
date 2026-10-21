@@ -181,11 +181,11 @@ public class PrecomputedData {
     }
 
     public boolean canWalkThrough(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
-        if (AltoClefSettings.getInstance().canSwimThroughLava() && state.getBlock() == Blocks.LAVA) {
-            return bsi.get0(x, y + 1, z).getFluidState().isEmpty();
-        }
         if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y, z)) {
             return false;
+        }
+        if (AltoClefSettings.getInstance().canSwimThroughLava() && state.getBlock() == Blocks.LAVA) {
+            return bsi.get0(x, y + 1, z).getFluidState().isEmpty();
         }
         int blockData = flags(state);
         if ((blockData & CAN_WALK_THROUGH_MAYBE_MASK) != 0) {
