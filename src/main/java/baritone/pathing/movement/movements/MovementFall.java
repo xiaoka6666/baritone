@@ -29,6 +29,7 @@ import baritone.pathing.movement.Movement;
 import baritone.pathing.movement.MovementHelper;
 import baritone.pathing.movement.MovementState;
 import baritone.pathing.movement.MovementState.MovementTarget;
+import baritone.altoclef.AltoClefSettings;
 import baritone.utils.pathing.MutableMoveResult;
 import java.util.HashSet;
 import java.util.Optional;
@@ -100,7 +101,8 @@ public class MovementFall extends Movement {
         }
 
         boolean isWater = destState.getFluidState().getType() instanceof WaterFluid;
-        if (!isWater && willPlaceBucket() && !playerFeet.equals(dest)) {
+        if (!isWater && willPlaceBucket() && !playerFeet.equals(dest) &&
+                !AltoClefSettings.getInstance().shouldNotPlaceBucketButStillFall()) {
             if (!Inventory.isHotbarSlot(ctx.player().getInventory().findSlotMatchingItem(STACK_BUCKET_WATER)) || ctx.world().dimension() == Level.NETHER) {
                 return state.setStatus(MovementStatus.UNREACHABLE);
             }

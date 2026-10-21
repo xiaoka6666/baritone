@@ -67,6 +67,10 @@ public interface IBuilderProcess extends IBaritoneProcess {
 
     void resume();
 
+    void popStack();
+
+    boolean isFromAltoclefFinished();
+
     void clearArea(BlockPos corner1, BlockPos corner2);
 
     /**
