@@ -190,7 +190,9 @@ public class PrecomputedData {
         if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y, z)) {
             return false;
         }
-        if (AltoClefSettings.getInstance().canSwimThroughLava() && state.getBlock() == Blocks.LAVA) {
+        if (AltoClefSettings.getInstance().canSwimThroughLava()
+                && state.getBlock() == Blocks.LAVA
+                && !Baritone.settings().blocksToAvoid.value.contains(state.getBlock())) {
             return bsi.get0(x, y + 1, z).getFluidState().isEmpty();
         }
         int blockData = flags(state);
