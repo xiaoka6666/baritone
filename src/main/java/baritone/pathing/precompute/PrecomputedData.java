@@ -175,6 +175,9 @@ public class PrecomputedData {
     }
 
     public boolean canWalkOn(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        AltoClefSettings settings = AltoClefSettings.getInstance();
+        if (settings.canWalkOnForce(x, y, z)) return true;
+        if (settings.shouldAvoidWalkThroughForce(x, y + 1, z)) return false;
         int blockData = flags(state);
         if ((blockData & CAN_WALK_ON_MAYBE_MASK) != 0) {
             return MovementHelper.canWalkOnPosition(bsi, x, y, z, state);
