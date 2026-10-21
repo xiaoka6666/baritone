@@ -235,15 +235,14 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         }
         this.schemSize = new Vec3i(schematic.widthX(), schematic.heightY(), schematic.lengthZ());
         this.fromAltoclefFinished = false;
-        this.fromAltoclef = false;
     }
 
     private void protectItemOfMissing() {
-        if (missing != null) {
-            protectedItems.putAll(missing);
-            protectedItems.keySet().forEach(e -> {
+        if (fromAltoclef && missing != null) {
+            missing.keySet().forEach(e -> {
                 if (!AltoClefSettings.getInstance().isItemProtected(e.getBlock().asItem())) {
                     AltoClefSettings.getInstance().protectItem(e.getBlock().asItem());
+                    protectedItems.put(e, missing.get(e));
                 }
             });
         }
@@ -272,10 +271,6 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         this.ticks = (int) stateStack.pop();
         this.approxPlaceable = (List<BlockState>) stateStack.pop();
         pushState();
-        if (!stateStack.isEmpty()) {
-            logDebug("ERROR: state stack was not empty after state restoration. Will throw away the rest for now.");
-            stateStack.clear();
-        }
     }
 
     @Override
@@ -285,12 +280,11 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
 
     @Override
     public void setFromAltoclef() {
-        this.fromAltoclef = true;
         if (this.stateStack.isEmpty()) {
             pushState();
         }
+        this.fromAltoclef = true;
     }
-
     private void stopProtectItemOfMissing() {
         if (protectedItems != null && protectedItems.size() > 0) {
             protectedItems.keySet().forEach(e -> {
@@ -752,7 +746,6 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
             if ((ctx.isLookingAt(toPlace.get().placeAgainst) && ((BlockHitResult) ctx.objectMouseOver()).getDirection().equals(toPlace.get().side)) || ctx.playerRotations().isReallyCloseTo(rot)) {
                 baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_RIGHT, true);
             }
-            stopProtectItemOfMissing();
             return new PathingCommand(null, PathingCommandType.CANCEL_AND_SET_GOAL);
         }
 
@@ -1190,6 +1183,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
 
     @Override
     public void onLostControl() {
+        stopProtectItemOfMissing();
         if (this.fromAltoclef && this.stateStack.isEmpty()) {
             pushState();
         }
