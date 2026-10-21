@@ -71,6 +71,13 @@ public interface IBuilderProcess extends IBaritoneProcess {
 
     boolean isFromAltoclefFinished();
 
+    /**
+     * Marks the next build as being started by AltoClef, enabling the AltoClef-specific
+     * builder state handling (state stack push/pop, missing-material protection).
+     * Call this after {@link #build(String, ISchematic, Vec3i)} has reset the flag.
+     */
+    void setFromAltoclef();
+
     void clearArea(BlockPos corner1, BlockPos corner2);
 
     /**

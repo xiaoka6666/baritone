@@ -283,6 +283,14 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         return this.fromAltoclefFinished;
     }
 
+    @Override
+    public void setFromAltoclef() {
+        this.fromAltoclef = true;
+        if (this.stateStack.isEmpty()) {
+            pushState();
+        }
+    }
+
     private void stopProtectItemOfMissing() {
         if (protectedItems != null && protectedItems.size() > 0) {
             protectedItems.keySet().forEach(e -> {
@@ -913,7 +921,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         List<BetterBlockPos> breakable = new ArrayList<>();
         List<BetterBlockPos> sourceLiquids = new ArrayList<>();
         List<BetterBlockPos> flowingLiquids = new ArrayList<>();
-        Map<BlockState, Integer> missing = new HashMap<>();
+        this.missing = new HashMap<>();
         List<BetterBlockPos> outOfBounds = new ArrayList<>();
         incorrectPositions.forEach(pos -> {
             BlockState state = bcc.bsi.get0(pos);
@@ -924,7 +932,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
                 } else if (containsBlockState(approxPlaceable, desired)) {
                     placeable.add(pos);
                 } else {
-                    missing.put(desired, 1 + missing.getOrDefault(desired, 0));
+                    this.missing.put(desired, 1 + this.missing.getOrDefault(desired, 0));
                 }
             } else {
                 if (state.getBlock() instanceof LiquidBlock) {
@@ -941,6 +949,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
                 }
             }
         });
+        protectItemOfMissing();
         incorrectPositions.removeAll(outOfBounds);
         List<Goal> toBreak = new ArrayList<>();
         breakable.forEach(pos -> toBreak.add(breakGoal(pos, bcc)));
@@ -958,9 +967,9 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
             return new JankyGoalComposite(new GoalComposite(toPlace.toArray(new Goal[0])), new GoalComposite(toBreak.toArray(new Goal[0])));
         }
         if (toBreak.isEmpty()) {
-            if (logMissing && !missing.isEmpty()) {
+            if (logMissing && !this.missing.isEmpty()) {
                 logDirect("Missing materials for at least:");
-                logDirect(missing.entrySet().stream()
+                logDirect(this.missing.entrySet().stream()
                         .map(e -> String.format("%sx %s", e.getValue(), e.getKey()))
                         .collect(Collectors.joining("\n")));
             }
@@ -1336,6 +1345,9 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         @Override
         public double costOfPlacingAt(int x, int y, int z, BlockState current) {
             if (isPossiblyProtected(x, y, z) || !worldBorder.canPlaceAt(x, z)) { // make calculation fail properly if we can't build
+                return COST_INF;
+            }
+            if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(x, y, z)) {
                 return COST_INF;
             }
             BlockState sch = getSchematic(x, y, z, current);
