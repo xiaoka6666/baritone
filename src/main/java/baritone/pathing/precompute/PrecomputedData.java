@@ -71,6 +71,7 @@ public class PrecomputedData {
     private final List<Block> blocksToAvoid;
     private final List<Block> blocksToDisallowBreaking;
     private final boolean canWalkOnEndPortal;
+    private final boolean canSwimThroughLava;
 
     private static volatile PrecomputedData shared;
 
@@ -82,6 +83,7 @@ public class PrecomputedData {
         this.blocksToAvoid = new ArrayList<>(Baritone.settings().blocksToAvoid.value);
         this.blocksToDisallowBreaking = new ArrayList<>(Baritone.settings().blocksToDisallowBreaking.value);
         this.canWalkOnEndPortal = AltoClefSettings.getInstance().isCanWalkOnEndPortal();
+        this.canSwimThroughLava = AltoClefSettings.getInstance().canSwimThroughLava();
     }
 
     // stone is still stone next search. we used to throw the whole table away every tick and
@@ -101,6 +103,7 @@ public class PrecomputedData {
                 && assumeWalkOnLava == Baritone.settings().assumeWalkOnLava.value
                 && allowWalkOnBottomSlab == Baritone.settings().allowWalkOnBottomSlab.value
                 && canWalkOnEndPortal == AltoClefSettings.getInstance().isCanWalkOnEndPortal()
+                && canSwimThroughLava == AltoClefSettings.getInstance().canSwimThroughLava()
                 && blocksToAvoid.equals(Baritone.settings().blocksToAvoid.value)
                 && blocksToDisallowBreaking.equals(Baritone.settings().blocksToDisallowBreaking.value);
     }
