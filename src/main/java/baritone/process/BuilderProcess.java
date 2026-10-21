@@ -107,7 +107,6 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
     private int numRepeats;
     private List<BlockState> approxPlaceable;
     public int stopAtHeight = 0;
-    private final Map<BlockState, Integer> protectedItems = new HashMap<>();
     private final Function<Map.Entry<Property<?>, Comparable<?>>, PropertyContainer> PROPERTY_ENTRY_TO_STRING_FUNCTION = new Function<>() {
         public PropertyContainer apply(@Nullable Map.Entry<Property<?>, Comparable<?>> entry) {
             if (entry == null) {
@@ -129,6 +128,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
     private Map<BlockState, Integer> missing;
     private boolean active;
     private Stack<Object> stateStack = new Stack<>();
+    private final Map<BlockState, Integer> newlyProtectedItems = new HashMap<>();
 
     public BuilderProcess(Baritone baritone) {
         super(baritone);
@@ -154,6 +154,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         stateStack.push(this.active);
         stateStack.push(this.missing);
         stateStack.push(this.schemSize);
+        stateStack.push(this.stopAtHeight);
         stateStack.push(this.fromAltoclefFinished);
         stateStack.push(this.fromAltoclef);
     }
@@ -242,7 +243,10 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
             missing.keySet().forEach(e -> {
                 if (!AltoClefSettings.getInstance().isItemProtected(e.getBlock().asItem())) {
                     AltoClefSettings.getInstance().protectItem(e.getBlock().asItem());
-                    protectedItems.put(e, missing.get(e));
+                    // record only what this process newly protected, so onLostControl
+                    // releases exactly that and does not clobber another builder's
+                    // protection on the same item
+                    newlyProtectedItems.put(e, missing.get(e));
                 }
             });
         }
@@ -256,6 +260,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         }
         this.fromAltoclef = (boolean) stateStack.pop();
         this.fromAltoclefFinished = (boolean) stateStack.pop();
+        this.stopAtHeight = (int) stateStack.pop();
         this.schemSize = (Vec3i) stateStack.pop();
         this.missing = (Map<BlockState, Integer>) stateStack.pop();
         this.active = (boolean) stateStack.pop();
@@ -286,15 +291,12 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         this.fromAltoclef = true;
     }
     private void stopProtectItemOfMissing() {
-        if (protectedItems != null && protectedItems.size() > 0) {
-            protectedItems.keySet().forEach(e -> {
-                if (AltoClefSettings.getInstance().isItemProtected(e.getBlock().asItem())) {
-                    AltoClefSettings.getInstance().stopProtectingItem(e.getBlock().asItem());
-                }
-            });
-        }
-        assert protectedItems != null;
-        protectedItems.clear();
+        newlyProtectedItems.keySet().forEach(e -> {
+            if (AltoClefSettings.getInstance().isItemProtected(e.getBlock().asItem())) {
+                AltoClefSettings.getInstance().stopProtectingItem(e.getBlock().asItem());
+            }
+        });
+        newlyProtectedItems.clear();
     }
 
     public void resume() {
@@ -800,8 +802,10 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         if (exec == null || exec.finished() || exec.failed()) {
             return;
         }
-        Movement movement = (Movement) exec.getPath().movements().get(exec.getPosition());
-        movement.update();
+        // the executor's own onTick() already advances the current Movement every tick
+        // (and handles UNREACHABLE/FAILED/SUCCESS transitions and splice). Calling
+        // movement.update() again here would advance the same movement twice per tick,
+        // so there is nothing extra for the builder to step.
     }
 
     private boolean isDefaultState(final BlockState state) {
