@@ -185,8 +185,6 @@ public class AltoClefSettings {
     }
 
     public double applyGlobalHeuristic(double prev, int x, int y, int z) {
-        return prev;
-        /*
         synchronized (globalHeuristicMutex) {
             BlockPos p = new BlockPos(x, y, z);
             for (BiFunction<Double, BlockPos, Double> toApply : _globalHeuristics) {
@@ -194,7 +192,6 @@ public class AltoClefSettings {
             }
         }
         return prev;
-         */
     }
 
     public HashSet<BlockPos> getBlocksToAvoidBreaking() {
