@@ -880,6 +880,9 @@ public interface MovementHelper extends ActionCosts, Helper {
 
     static PlaceResult attemptToPlaceABlock(MovementState state, IBaritone baritone, BlockPos placeAt, boolean preferDown, boolean wouldSneak) {
         IPlayerContext ctx = baritone.getPlayerContext();
+        if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(placeAt.getX(), placeAt.getY(), placeAt.getZ())) {
+            return PlaceResult.NO_OPTION; // target is reserved by an external caller; do not even aim a movement target at it
+        }
         Optional<Rotation> direct = RotationUtils.reachable(ctx, placeAt, wouldSneak); // we assume that if there is a block there, it must be replacable
         boolean found = false;
         if (direct.isPresent()) {
