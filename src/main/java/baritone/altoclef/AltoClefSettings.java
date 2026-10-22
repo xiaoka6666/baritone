@@ -227,18 +227,27 @@ public class AltoClefSettings {
         return _globalHeuristics;
     }
 
+    /**
+     * An item is considered protected while either the legacy flag or at least
+     * one owner claim is present.
+     */
     public boolean isItemProtected(Item item) {
         synchronized (propertiesMutex) {
-            return _protectedItems.contains(item);
+            return _protectedItems.contains(item) || _protectionOwners.containsKey(item);
         }
     }
 
     public HashSet<Item> getProtectedItems() {
         synchronized (propertiesMutex) {
-            return new HashSet<>(_protectedItems);
+            HashSet<Item> all = new HashSet<>(_protectedItems);
+            all.addAll(_protectionOwners.keySet());
+            return all;
         }
     }
 
+    /**
+     * Legacy protection flag; release with {@link #stopProtectingItem(Item)}.
+     */
     public void protectItem(Item item) {
         synchronized (propertiesMutex) {
             _protectedItems.add(item);
@@ -246,18 +255,20 @@ public class AltoClefSettings {
     }
 
     /**
-     * Adds an owner to the given item's protection. The item stays protected
-     * while any owner (or the legacy uncounted {@link #protectItem(Item)} flag)
-     * still references it, so one caller releasing ownership never lifts a
-     * protection another caller still relies on.
+     * Adds an owner to the given item's protection. The claim is recorded only
+     * in _protectionOwners so that an owner release can never clear a legacy
+     * protection taken out via {@link #protectItem(Item)}, and vice versa.
      */
     public void protectItem(Item item, Object owner) {
         synchronized (propertiesMutex) {
             _protectionOwners.computeIfAbsent(item, k -> new HashSet<>()).add(owner);
-            _protectedItems.add(item);
         }
     }
 
+    /**
+     * Clears only the legacy protection flag. Owner claims are untouched and
+     * keep the item protected until every owner releases its claim.
+     */
     public void stopProtectingItem(Item item) {
         synchronized (propertiesMutex) {
             _protectedItems.remove(item);
@@ -265,8 +276,8 @@ public class AltoClefSettings {
     }
 
     /**
-     * Removes one owner's claim on the item; the protection itself is only
-     * lifted when no owners remain.
+     * Removes one owner's claim on the item; the item stays protected while the
+     * legacy flag is set or other owners still hold claims.
      */
     public void stopProtectingItem(Item item, Object owner) {
         synchronized (propertiesMutex) {
@@ -275,7 +286,6 @@ public class AltoClefSettings {
                 owners.remove(owner);
                 if (owners.isEmpty()) {
                     _protectionOwners.remove(item);
-                    _protectedItems.remove(item);
                 }
             }
         }
