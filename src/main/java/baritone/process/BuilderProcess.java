@@ -170,6 +170,13 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         if (this.fromAltoclef && this.stateStack.isEmpty()) {
             pushState();
         }
+        // a saved snapshot from an earlier idle/paused build still owns
+        // material-protection claims we haven't reconciled yet; if we are about
+        // to overwrite or drop that state through a new build, release the claims
+        // first so we don't leak them into the next build or other instances
+        if (this.stateStack.size() > 1) {
+            stopProtectItemOfMissing();
+        }
         this.name = name;
         this.schematic = schematic;
         this.realSchematic = null;

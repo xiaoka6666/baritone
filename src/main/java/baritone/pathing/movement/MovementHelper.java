@@ -917,6 +917,9 @@ public interface MovementHelper extends ActionCosts, Helper {
             Direction side = ((BlockHitResult) ctx.objectMouseOver()).getDirection();
             // only way for selectedBlock.equals(placeAt) to be true is if it's replaceable
             if (selectedBlock.equals(placeAt) || (MovementHelper.canPlaceAgainst(ctx, selectedBlock) && selectedBlock.relative(side).equals(placeAt))) {
+                if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(placeAt.getX(), placeAt.getY(), placeAt.getZ())) {
+                    return PlaceResult.NO_OPTION; // a policy caller reserved this exact target; do not click-place into it
+                }
                 if (wouldSneak) {
                     state.setInput(Input.SNEAK, true);
                 }
@@ -925,6 +928,9 @@ public interface MovementHelper extends ActionCosts, Helper {
             }
         }
         if (found) {
+            if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(placeAt.getX(), placeAt.getY(), placeAt.getZ())) {
+                return PlaceResult.NO_OPTION; // same target-policy check for the ATTEMPTING path
+            }
             if (wouldSneak) {
                 state.setInput(Input.SNEAK, true);
             }
