@@ -25,6 +25,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -45,6 +47,9 @@ public class AltoClefSettings {
     private final List<BiPredicate<BlockState, ItemStack>> _forceUseTool = new ArrayList<>();
     private final List<BiFunction<Double, BlockPos, Double>> _globalHeuristics = new ArrayList<>();
     private final HashSet<Item> _protectedItems = new HashSet<>();
+    // per-item owner tracking so one builder/instance releasing its claim does
+    // not lift a protection another instance still holds
+    private final java.util.Map<Item, Set<Object>> _protectionOwners = new java.util.HashMap<>();
     private boolean _allowFlowingWaterPass;
     private boolean _pauseInteractions;
     private boolean _dontPlaceBucketButStillFall;
@@ -223,19 +228,57 @@ public class AltoClefSettings {
     }
 
     public boolean isItemProtected(Item item) {
-        return _protectedItems.contains(item);
+        synchronized (propertiesMutex) {
+            return _protectedItems.contains(item);
+        }
     }
 
     public HashSet<Item> getProtectedItems() {
-        return _protectedItems;
+        synchronized (propertiesMutex) {
+            return new HashSet<>(_protectedItems);
+        }
     }
 
     public void protectItem(Item item) {
-        _protectedItems.add(item);
+        synchronized (propertiesMutex) {
+            _protectedItems.add(item);
+        }
+    }
+
+    /**
+     * Adds an owner to the given item's protection. The item stays protected
+     * while any owner (or the legacy uncounted {@link #protectItem(Item)} flag)
+     * still references it, so one caller releasing ownership never lifts a
+     * protection another caller still relies on.
+     */
+    public void protectItem(Item item, Object owner) {
+        synchronized (propertiesMutex) {
+            _protectionOwners.computeIfAbsent(item, k -> new HashSet<>()).add(owner);
+            _protectedItems.add(item);
+        }
     }
 
     public void stopProtectingItem(Item item) {
-        _protectedItems.remove(item);
+        synchronized (propertiesMutex) {
+            _protectedItems.remove(item);
+        }
+    }
+
+    /**
+     * Removes one owner's claim on the item; the protection itself is only
+     * lifted when no owners remain.
+     */
+    public void stopProtectingItem(Item item, Object owner) {
+        synchronized (propertiesMutex) {
+            Set<Object> owners = _protectionOwners.get(item);
+            if (owners != null) {
+                owners.remove(owner);
+                if (owners.isEmpty()) {
+                    _protectionOwners.remove(item);
+                    _protectedItems.remove(item);
+                }
+            }
+        }
     }
 
     public Object getBreakMutex() {

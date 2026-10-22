@@ -241,13 +241,11 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
     private void protectItemOfMissing() {
         if (fromAltoclef && missing != null) {
             missing.keySet().forEach(e -> {
-                if (!AltoClefSettings.getInstance().isItemProtected(e.getBlock().asItem())) {
-                    AltoClefSettings.getInstance().protectItem(e.getBlock().asItem());
-                    // record only what this process newly protected, so onLostControl
-                    // releases exactly that and does not clobber another builder's
-                    // protection on the same item
-                    newlyProtectedItems.put(e, missing.get(e));
-                }
+                // owner-scoped protection: this BuilderProcess instance is the owner
+                // record, so a second builder on the same item can add its own claim
+                // without being short-circuited by isItemProtected()
+                AltoClefSettings.getInstance().protectItem(e.getBlock().asItem(), this);
+                newlyProtectedItems.put(e, missing.get(e));
             });
         }
     }
@@ -292,9 +290,7 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
     }
     private void stopProtectItemOfMissing() {
         newlyProtectedItems.keySet().forEach(e -> {
-            if (AltoClefSettings.getInstance().isItemProtected(e.getBlock().asItem())) {
-                AltoClefSettings.getInstance().stopProtectingItem(e.getBlock().asItem());
-            }
+            AltoClefSettings.getInstance().stopProtectingItem(e.getBlock().asItem(), this);
         });
         newlyProtectedItems.clear();
     }
@@ -470,6 +466,9 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
                         continue; // irrelevant
                     }
                     BlockState curr = bcc.bsi.get0(x, y, z);
+                    if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(x, y, z)) {
+                        continue; // this position is marked avoid-place by an external caller
+                    }
                     if (MovementHelper.isReplaceable(x, y, z, curr, bcc.bsi) && !valid(curr, desired, false)) {
                         if (dy == 1 && bcc.bsi.get0(x, y + 1, z).getBlock() instanceof AirBlock) {
                             continue;
