@@ -18,6 +18,7 @@
 package baritone.pathing.precompute;
 
 import baritone.Baritone;
+import baritone.altoclef.AltoClefSettings;
 import baritone.pathing.movement.MovementHelper;
 import baritone.utils.BlockStateInterface;
 import baritone.utils.accessor.IBlockStateFlags;
@@ -69,6 +70,8 @@ public class PrecomputedData {
     private final boolean allowWalkOnBottomSlab;
     private final List<Block> blocksToAvoid;
     private final List<Block> blocksToDisallowBreaking;
+    private final boolean canWalkOnEndPortal;
+    private final boolean canSwimThroughLava;
 
     private static volatile PrecomputedData shared;
 
@@ -79,6 +82,8 @@ public class PrecomputedData {
         this.allowWalkOnBottomSlab = Baritone.settings().allowWalkOnBottomSlab.value;
         this.blocksToAvoid = new ArrayList<>(Baritone.settings().blocksToAvoid.value);
         this.blocksToDisallowBreaking = new ArrayList<>(Baritone.settings().blocksToDisallowBreaking.value);
+        this.canWalkOnEndPortal = AltoClefSettings.getInstance().isCanWalkOnEndPortal();
+        this.canSwimThroughLava = AltoClefSettings.getInstance().canSwimThroughLava();
     }
 
     // stone is still stone next search. we used to throw the whole table away every tick and
@@ -97,6 +102,8 @@ public class PrecomputedData {
                 && allowVines == Baritone.settings().allowVines.value
                 && assumeWalkOnLava == Baritone.settings().assumeWalkOnLava.value
                 && allowWalkOnBottomSlab == Baritone.settings().allowWalkOnBottomSlab.value
+                && canWalkOnEndPortal == AltoClefSettings.getInstance().isCanWalkOnEndPortal()
+                && canSwimThroughLava == AltoClefSettings.getInstance().canSwimThroughLava()
                 && blocksToAvoid.equals(Baritone.settings().blocksToAvoid.value)
                 && blocksToDisallowBreaking.equals(Baritone.settings().blocksToDisallowBreaking.value);
     }
@@ -168,6 +175,9 @@ public class PrecomputedData {
     }
 
     public boolean canWalkOn(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        AltoClefSettings settings = AltoClefSettings.getInstance();
+        if (settings.canWalkOnForce(x, y, z)) return true;
+        if (settings.shouldAvoidWalkThroughForce(x, y + 1, z)) return false;
         int blockData = flags(state);
         if ((blockData & CAN_WALK_ON_MAYBE_MASK) != 0) {
             return MovementHelper.canWalkOnPosition(bsi, x, y, z, state);
@@ -177,6 +187,14 @@ public class PrecomputedData {
     }
 
     public boolean canWalkThrough(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y, z)) {
+            return false;
+        }
+        if (AltoClefSettings.getInstance().canSwimThroughLava()
+                && state.getBlock() == Blocks.LAVA
+                && !Baritone.settings().blocksToAvoid.value.contains(state.getBlock())) {
+            return bsi.get0(x, y + 1, z).getFluidState().isEmpty();
+        }
         int blockData = flags(state);
         if ((blockData & CAN_WALK_THROUGH_MAYBE_MASK) != 0) {
             return MovementHelper.canWalkThroughPosition(bsi, x, y, z, state);
@@ -186,6 +204,9 @@ public class PrecomputedData {
     }
 
     public boolean fullyPassable(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y, z)) {
+            return false;
+        }
         int blockData = flags(state);
         if ((blockData & FULLY_PASSABLE_MAYBE_MASK) != 0) {
             return MovementHelper.fullyPassablePosition(bsi, x, y, z, state);

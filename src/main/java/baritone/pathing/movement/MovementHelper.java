@@ -18,6 +18,7 @@
 package baritone.pathing.movement;
 
 import baritone.Baritone;
+import baritone.altoclef.AltoClefSettings;
 import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.pathing.movement.ActionCosts;
@@ -83,11 +84,16 @@ public interface MovementHelper extends ActionCosts, Helper {
     }
 
     static boolean avoidBreaking(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        if (bsi.get0(x, y + 1, z).getBlock() instanceof EndPortalFrameBlock) {
+            return true;
+        }
+        if (AltoClefSettings.getInstance().shouldAvoidBreaking(new BlockPos(x, y, z))) return true;
         if (!bsi.worldBorder.canPlaceAt(x, z)) {
             return true;
         }
         Block b = state.getBlock();
         return Baritone.settings().blocksToDisallowBreaking.value.contains(b)
+                || b instanceof EndPortalFrameBlock
                 || b == Blocks.ICE // ice becomes water, and water can mess up the path
                 || b instanceof InfestedBlock // obvious reasons
                 // call context.get directly with x,y,z. no need to make 5 new BlockPos for no reason
@@ -144,7 +150,16 @@ public interface MovementHelper extends ActionCosts, Helper {
     }
 
     static boolean canWalkThrough(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y, z)) {
+            return false;
+        }
         Ternary canWalkThrough = canWalkThroughBlockState(state);
+        Block block = state.getBlock();
+        if (block == Blocks.LAVA
+                && AltoClefSettings.getInstance().canSwimThroughLava()
+                && !Baritone.settings().blocksToAvoid.value.contains(block)) {
+            return bsi.get0(x, y + 1, z).getFluidState().isEmpty();
+        }
         if (canWalkThrough == YES) {
             return true;
         }
@@ -292,6 +307,9 @@ public interface MovementHelper extends ActionCosts, Helper {
     static boolean fullyPassable(IPlayerContext ctx, BlockPos pos) {
         BlockState state = ctx.world().getBlockState(pos);
         Ternary fullyPassable = fullyPassableBlockState(state);
+        if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(pos)) {
+            return false;
+        }
         if (fullyPassable == YES) {
             return true;
         }
@@ -367,6 +385,7 @@ public interface MovementHelper extends ActionCosts, Helper {
                 || block == Blocks.CACTUS
                 || block == Blocks.SWEET_BERRY_BUSH
                 || block instanceof BaseFireBlock
+                || block instanceof EndPortalFrameBlock
                 || block == Blocks.END_PORTAL
                 || block == Blocks.COBWEB
                 || block == Blocks.BUBBLE_COLUMN;
@@ -388,6 +407,8 @@ public interface MovementHelper extends ActionCosts, Helper {
      */
     static boolean canWalkOn(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
         Ternary canWalkOn = canWalkOnBlockState(state);
+        if (AltoClefSettings.getInstance().canWalkOnForce(x, y, z)) return true;
+        if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y + 1, z)) return false;
         if (canWalkOn == YES) {
             return true;
         }
@@ -399,6 +420,14 @@ public interface MovementHelper extends ActionCosts, Helper {
 
     static Ternary canWalkOnBlockState(BlockState state) {
         Block block = state.getBlock();
+        //Extra blocks we may want to walk on.
+        if (block instanceof EndPortalFrameBlock) {
+            return YES;
+        }
+        if (block == Blocks.END_PORTAL && AltoClefSettings.getInstance().isCanWalkOnEndPortal()) {
+            return YES;
+        }
+        //*****************************************
         if (isBlockNormalCube(state) && (block != Blocks.MAGMA_BLOCK || Baritone.settings().allowWalkOnMagmaBlocks.value) && block != Blocks.BUBBLE_COLUMN && block != Blocks.HONEY_BLOCK) {
             return YES;
         }
@@ -578,6 +607,7 @@ public interface MovementHelper extends ActionCosts, Helper {
     }
 
     static boolean canPlaceAgainst(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(x, y, z)) return false;
         if (!bsi.worldBorder.canPlaceAt(x, z)) {
             return false;
         }
@@ -640,6 +670,9 @@ public interface MovementHelper extends ActionCosts, Helper {
             if (strVsBlock <= 0) {
                 return COST_INF;
             }
+            if (AltoClefSettings.getInstance().shouldAvoidBreaking(x, y, z)) {
+                return COST_INF;
+            }
             double result = 1 / strVsBlock;
             result += context.breakBlockAdditionalCost;
             result *= mult;
@@ -677,6 +710,7 @@ public interface MovementHelper extends ActionCosts, Helper {
      * @param ts  previously calculated ToolSet
      */
     static void switchToBestToolFor(IPlayerContext ctx, BlockState b, ToolSet ts, boolean preferSilkTouch) {
+        if (AltoClefSettings.getInstance().isInteractionPaused()) return;
         if (Baritone.settings().autoTool.value && !Baritone.settings().assumeExternalAutoTool.value) {
             ctx.player().getInventory().selected = ts.getBestSlot(b.getBlock(), preferSilkTouch);
         }
@@ -737,7 +771,10 @@ public interface MovementHelper extends ActionCosts, Helper {
      */
     static boolean isWater(BlockState state) {
         Fluid f = state.getFluidState().getType();
-        return f == Fluids.WATER || f == Fluids.FLOWING_WATER;
+        if (f == Fluids.WATER || f == Fluids.FLOWING_WATER) {
+            return true;
+        }
+        return (f == Fluids.LAVA || f == Fluids.FLOWING_LAVA) && AltoClefSettings.getInstance().canSwimThroughLava();
     }
 
     /**
@@ -843,6 +880,9 @@ public interface MovementHelper extends ActionCosts, Helper {
 
     static PlaceResult attemptToPlaceABlock(MovementState state, IBaritone baritone, BlockPos placeAt, boolean preferDown, boolean wouldSneak) {
         IPlayerContext ctx = baritone.getPlayerContext();
+        if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(placeAt.getX(), placeAt.getY(), placeAt.getZ())) {
+            return PlaceResult.NO_OPTION; // target is reserved by an external caller; do not even aim a movement target at it
+        }
         Optional<Rotation> direct = RotationUtils.reachable(ctx, placeAt, wouldSneak); // we assume that if there is a block there, it must be replacable
         boolean found = false;
         if (direct.isPresent()) {
@@ -880,6 +920,9 @@ public interface MovementHelper extends ActionCosts, Helper {
             Direction side = ((BlockHitResult) ctx.objectMouseOver()).getDirection();
             // only way for selectedBlock.equals(placeAt) to be true is if it's replaceable
             if (selectedBlock.equals(placeAt) || (MovementHelper.canPlaceAgainst(ctx, selectedBlock) && selectedBlock.relative(side).equals(placeAt))) {
+                if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(placeAt.getX(), placeAt.getY(), placeAt.getZ())) {
+                    return PlaceResult.NO_OPTION; // a policy caller reserved this exact target; do not click-place into it
+                }
                 if (wouldSneak) {
                     state.setInput(Input.SNEAK, true);
                 }
@@ -888,6 +931,9 @@ public interface MovementHelper extends ActionCosts, Helper {
             }
         }
         if (found) {
+            if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(placeAt.getX(), placeAt.getY(), placeAt.getZ())) {
+                return PlaceResult.NO_OPTION; // same target-policy check for the ATTEMPTING path
+            }
             if (wouldSneak) {
                 state.setInput(Input.SNEAK, true);
             }
