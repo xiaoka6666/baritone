@@ -67,6 +67,19 @@ public interface IBuilderProcess extends IBaritoneProcess {
 
     void resume();
 
+    void popStack();
+
+    boolean isFromAltoclefFinished();
+
+    /**
+     * Marks the next build as being started by AltoClef, enabling the AltoClef-specific
+     * builder state handling (state stack push/pop, missing-material protection).
+     * Call this before {@link #build(String, ISchematic, Vec3i)} so the active state
+     * is saved first; the snapshot retains the previous marker value and AltoClef
+     * completion reporting stays active for the AltoClef build.
+     */
+    void setFromAltoclef();
+
     void clearArea(BlockPos corner1, BlockPos corner2);
 
     /**
