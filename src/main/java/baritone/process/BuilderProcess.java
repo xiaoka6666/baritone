@@ -162,8 +162,9 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
         // material-protection claims we haven't reconciled yet; if we are about
         // to overwrite or drop that state through a new build, release the claims
         // first so we don't leak them into the next build or other instances
-        if (this.stateStack.size() > 1) {
+        if (!this.fromAltoclef && !this.stateStack.isEmpty()) {
             stopProtectItemOfMissing();
+            this.stateStack.clear();
         }
         this.name = name;
         this.schematic = schematic;
@@ -291,10 +292,6 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
     }
 
     public void resume() {
-        if (!this.stateStack.isEmpty()) {
-            popStack();
-        }
-
         this.paused = false;
         this.active = true;
     }
