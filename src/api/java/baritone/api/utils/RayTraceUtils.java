@@ -31,10 +31,12 @@ public final class RayTraceUtils {
 
     private RayTraceUtils() {}
 
-    public static ClipContext.Fluid fluidHandling = ClipContext.Fluid.NONE;
-
-
     /**
+     * Configurable fluid handling for ray-tracing. Set this from the main thread;
+     * pathfinding threads read it during ray-trace execution. Volatile so writes
+     * are immediately visible to all reader threads.
+     */
+    public static volatile ClipContext.Fluid fluidHandling = ClipContext.Fluid.NONE;    /**
      * Performs a block raytrace with the specified rotations. This should only be used when
      * any entity collisions can be ignored, because this method will not recognize if an
      * entity is in the way or not. The local player's block reach distance will be used.

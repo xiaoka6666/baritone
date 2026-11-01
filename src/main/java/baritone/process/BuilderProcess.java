@@ -248,8 +248,10 @@ public final class BuilderProcess extends BaritoneProcessHelper implements IBuil
 
     @Override
     public void popStack() {
-        if (this.stateStack.isEmpty()) {
-            logDebug("ERROR in BuildProcess: No state present to pop");
+        if (this.stateStack.size() < 17) {
+            logDebug("ERROR in BuildProcess: state stack has " + this.stateStack.size()
+                    + " entries, expected 17. Discarding corrupt stack.");
+            this.stateStack.clear();
             return;
         }
         this.fromAltoclef = (boolean) stateStack.pop();

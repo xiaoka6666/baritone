@@ -34,7 +34,7 @@ import java.util.function.Predicate;
 public class AltoClefSettings {
 
     // woo singletons
-    private static AltoClefSettings _instance = new AltoClefSettings();
+    private static final AltoClefSettings _instance = new AltoClefSettings();
     private final Object breakMutex = new Object();
     private final Object placeMutex = new Object();
     private final Object propertiesMutex = new Object();
@@ -102,17 +102,31 @@ public class AltoClefSettings {
     }
 
     public boolean shouldAvoidBreaking(BlockPos pos) {
+        boolean inSet;
+        List<Predicate<BlockPos>> snapshot;
         synchronized (breakMutex) {
-            if (_blocksToAvoidBreaking.contains(pos))
-                return true;
-            return (_breakAvoiders.stream().anyMatch(pred -> pred.test(pos)));
+            inSet = _blocksToAvoidBreaking.contains(pos);
+            snapshot = new ArrayList<>(_breakAvoiders);
         }
+        if (inSet)
+            return true;
+        for (Predicate<BlockPos> pred : snapshot) {
+            if (pred.test(pos))
+                return true;
+        }
+        return false;
     }
 
     public boolean shouldAvoidPlacingAt(BlockPos pos) {
+        List<Predicate<BlockPos>> snapshot;
         synchronized (placeMutex) {
-            return _placeAvoiders.stream().anyMatch(pred -> pred.test(pos));
+            snapshot = new ArrayList<>(_placeAvoiders);
         }
+        for (Predicate<BlockPos> pred : snapshot) {
+            if (pred.test(pos))
+                return true;
+        }
+        return false;
     }
 
     public boolean shouldAvoidPlacingAt(int x, int y, int z) {
@@ -120,15 +134,28 @@ public class AltoClefSettings {
     }
 
     public boolean canWalkOnForce(int x, int y, int z) {
+        List<Predicate<BlockPos>> snapshot;
         synchronized (propertiesMutex) {
-            return _forceCanWalkOn.stream().anyMatch(pred -> pred.test(new BlockPos(x, y, z)));
+            snapshot = new ArrayList<>(_forceCanWalkOn);
         }
+        BlockPos p = new BlockPos(x, y, z);
+        for (Predicate<BlockPos> pred : snapshot) {
+            if (pred.test(p))
+                return true;
+        }
+        return false;
     }
 
     public boolean shouldAvoidWalkThroughForce(BlockPos pos) {
+        List<Predicate<BlockPos>> snapshot;
         synchronized (propertiesMutex) {
-            return _forceAvoidWalkThrough.stream().anyMatch(pred -> pred.test(pos));
+            snapshot = new ArrayList<>(_forceAvoidWalkThrough);
         }
+        for (Predicate<BlockPos> pred : snapshot) {
+            if (pred.test(pos))
+                return true;
+        }
+        return false;
     }
 
     public boolean shouldAvoidWalkThroughForce(int x, int y, int z) {
@@ -136,9 +163,15 @@ public class AltoClefSettings {
     }
 
     public boolean shouldForceUseTool(BlockState state, ItemStack tool) {
+        List<BiPredicate<BlockState, ItemStack>> snapshot;
         synchronized (propertiesMutex) {
-            return _forceUseTool.stream().anyMatch(pred -> pred.test(state, tool));
+            snapshot = new ArrayList<>(_forceUseTool);
         }
+        for (BiPredicate<BlockState, ItemStack> pred : snapshot) {
+            if (pred.test(state, tool))
+                return true;
+        }
+        return false;
     }
 
     public boolean shouldNotPlaceBucketButStillFall() {
@@ -190,39 +223,71 @@ public class AltoClefSettings {
     }
 
     public double applyGlobalHeuristic(double prev, int x, int y, int z) {
+        List<BiFunction<Double, BlockPos, Double>> snapshot;
         synchronized (globalHeuristicMutex) {
-            BlockPos p = new BlockPos(x, y, z);
-            for (BiFunction<Double, BlockPos, Double> toApply : _globalHeuristics) {
-                prev = toApply.apply(prev, p);
-            }
+            snapshot = new ArrayList<>(_globalHeuristics);
+        }
+        BlockPos p = new BlockPos(x, y, z);
+        for (BiFunction<Double, BlockPos, Double> toApply : snapshot) {
+            prev = toApply.apply(prev, p);
         }
         return prev;
     }
 
+    /**
+     * Returns the live set of blocks to avoid breaking.
+     * <p>Callers that iterate this set concurrently with AltoClef settings
+     * reconciliation (which does {@code clear() + addAll()}) must hold
+     * {@link #getBreakMutex()} to avoid seeing a torn state.</p>
+     */
     public HashSet<BlockPos> getBlocksToAvoidBreaking() {
         return _blocksToAvoidBreaking;
     }
 
+    /**
+     * Returns the live list of break-avoiding predicates.
+     * <p>Concurrent readers must hold {@link #getBreakMutex()}.</p>
+     */
     public List<Predicate<BlockPos>> getBreakAvoiders() {
         return _breakAvoiders;
     }
 
+    /**
+     * Returns the live list of place-avoiding predicates.
+     * <p>Concurrent readers must hold {@link #getPlaceMutex()}.</p>
+     */
     public List<Predicate<BlockPos>> getPlaceAvoiders() {
         return _placeAvoiders;
     }
 
+    /**
+     * Returns the live list of force-walk-on predicates.
+     * <p>Concurrent readers must hold {@link #getPropertiesMutex()}.</p>
+     */
     public List<Predicate<BlockPos>> getForceWalkOnPredicates() {
         return _forceCanWalkOn;
     }
 
+    /**
+     * Returns the live list of force-avoid-walk-through predicates.
+     * <p>Concurrent readers must hold {@link #getPropertiesMutex()}.</p>
+     */
     public List<Predicate<BlockPos>> getForceAvoidWalkThroughPredicates() {
         return _forceAvoidWalkThrough;
     }
 
+    /**
+     * Returns the live list of force-use-tool predicates.
+     * <p>Concurrent readers must hold {@link #getPropertiesMutex()}.</p>
+     */
     public List<BiPredicate<BlockState, ItemStack>> getForceUseToolPredicates() {
         return _forceUseTool;
     }
 
+    /**
+     * Returns the live list of global heuristics.
+     * <p>Concurrent readers must hold {@link #getGlobalHeuristicMutex()}.</p>
+     */
     public List<BiFunction<Double, BlockPos, Double>> getGlobalHeuristics() {
         return _globalHeuristics;
     }
@@ -237,6 +302,11 @@ public class AltoClefSettings {
         }
     }
 
+    /**
+     * Returns the union of legacy-protected items and owner-claimed items.
+     * The returned set is a snapshot — it does not update live.
+     * Concurrent readers may use this without holding the lock.
+     */
     public HashSet<Item> getProtectedItems() {
         synchronized (propertiesMutex) {
             HashSet<Item> all = new HashSet<>(_protectedItems);
