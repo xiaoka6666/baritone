@@ -18,6 +18,7 @@
 package baritone.pathing.movement.movements;
 
 import baritone.Baritone;
+import baritone.altoclef.AltoClefSettings;
 import baritone.api.IBaritone;
 import baritone.api.pathing.movement.MovementStatus;
 import baritone.api.utils.BetterBlockPos;
@@ -211,7 +212,8 @@ public class MovementDescend extends Movement {
                 res.cost = tentativeCost;
                 return false;
             }
-            if (reachedMinimum && context.hasWaterBucket && unprotectedFallHeight <= context.maxFallHeightBucket + 1) {
+            if (reachedMinimum && !AltoClefSettings.getInstance().shouldNotPlaceBucketButStillFall()
+                    && context.hasWaterBucket && unprotectedFallHeight <= context.maxFallHeightBucket + 1) {
                 res.x = destX;
                 res.y = newY + 1;// this is the block we're falling onto, so dest is +1
                 res.z = destZ;
@@ -281,7 +283,11 @@ public class MovementDescend extends Movement {
             return true;
         }
         for (int y = 0; y <= 2; y++) { // we could hit any of the three blocks
+            BlockPos p = into.above(y);
             if (MovementHelper.avoidWalkingInto(BlockStateInterface.get(ctx, into.above(y)))) {
+                return true;
+            }
+            if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(p)) {
                 return true;
             }
         }

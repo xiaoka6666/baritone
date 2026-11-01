@@ -18,6 +18,7 @@
 package baritone.process;
 
 import baritone.Baritone;
+import baritone.altoclef.AltoClefSettings;
 import baritone.api.BaritoneAPI;
 import baritone.api.pathing.goals.*;
 import baritone.api.process.IMineProcess;
@@ -38,6 +39,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.AirBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.EndPortalBlock;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -101,6 +103,10 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
             }
         }
 
+        // Wait for pause interactions
+        if (AltoClefSettings.getInstance().isInteractionPaused()) {
+            return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+        }
         updateLoucaSystem();
         int mineGoalUpdateInterval = Baritone.settings().mineGoalUpdateInterval.value;
         List<BlockPos> curr = new ArrayList<>(knownOreLocations);
@@ -485,6 +491,10 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
 
 
     public static boolean plausibleToBreak(CalculationContext ctx, BlockPos pos) {
+        if (ctx.get(pos).getBlock() instanceof EndPortalBlock ||
+                ctx.get(pos).getBlock() == Blocks.LAVA) {
+            return true;
+        }
         BlockState state = ctx.bsi.get0(pos);
         if (MovementHelper.getMiningDurationTicks(ctx, pos.getX(), pos.getY(), pos.getZ(), state, true) >= COST_INF) {
             return false;
