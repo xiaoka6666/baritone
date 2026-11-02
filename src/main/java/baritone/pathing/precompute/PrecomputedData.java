@@ -17,9 +17,12 @@
 
 package baritone.pathing.precompute;
 
+import baritone.Baritone;
+import baritone.altoclef.AltoClefSettings;
 import baritone.pathing.movement.MovementHelper;
 import baritone.utils.BlockStateInterface;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class PrecomputedData {
@@ -70,13 +73,15 @@ public class PrecomputedData {
     }
 
     public boolean canWalkOn(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        AltoClefSettings settings = AltoClefSettings.getInstance();
+        if (settings.canWalkOnForce(x, y, z)) return true;
+        if (settings.shouldAvoidWalkThroughForce(x, y + 1, z)) return false;
         int id = Block.BLOCK_STATE_REGISTRY.getId(state);
         int blockData = data[id];
 
         if ((blockData & COMPLETED_MASK) == 0) { // we need to fill in the data
             blockData = fillData(id, state);
         }
-
         if ((blockData & CAN_WALK_ON_MAYBE_MASK) != 0) {
             return MovementHelper.canWalkOnPosition(bsi, x, y, z, state);
         } else {
@@ -85,13 +90,20 @@ public class PrecomputedData {
     }
 
     public boolean canWalkThrough(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y, z)) {
+            return false;
+        }
+        if (AltoClefSettings.getInstance().canSwimThroughLava()
+                && state.getBlock() == Blocks.LAVA
+                && !Baritone.settings().blocksToAvoid.value.contains(state.getBlock())) {
+            return bsi.get0(x, y + 1, z).getFluidState().isEmpty();
+        }
         int id = Block.BLOCK_STATE_REGISTRY.getId(state);
         int blockData = data[id];
 
         if ((blockData & COMPLETED_MASK) == 0) { // we need to fill in the data
             blockData = fillData(id, state);
         }
-
         if ((blockData & CAN_WALK_THROUGH_MAYBE_MASK) != 0) {
             return MovementHelper.canWalkThroughPosition(bsi, x, y, z, state);
         } else {
@@ -100,13 +112,15 @@ public class PrecomputedData {
     }
 
     public boolean fullyPassable(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
+        if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y, z)) {
+            return false;
+        }
         int id = Block.BLOCK_STATE_REGISTRY.getId(state);
         int blockData = data[id];
 
         if ((blockData & COMPLETED_MASK) == 0) { // we need to fill in the data
             blockData = fillData(id, state);
         }
-
         if ((blockData & FULLY_PASSABLE_MAYBE_MASK) != 0) {
             return MovementHelper.fullyPassablePosition(bsi, x, y, z, state);
         } else {
